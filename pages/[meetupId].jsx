@@ -1,25 +1,41 @@
 import MeetupDetail from "@/components/meetups/MeetupDetail";
+import { getMongodbClient } from "@/libs/db";
+import { ObjectId } from "mongodb";
 
 const MeetupDetailPage = (props) => {
   const { meetupData } = props;
 
   return (
     <MeetupDetail
-      image={meetupData.image}
-      title={meetupData.title}
-      address={meetupData.address}
-      description={meetupData.description}
+      image={meetupData?.image}
+      title={meetupData?.title}
+      address={meetupData?.address}
+      description={meetupData?.description}
     />
   );
 };
 
 export const getStaticPaths = async () => {
-  return {
-    paths: [
+  const client = await getMongodbClient();
+
+  const db = client.db();
+  const meetupsCollection = db.collection("meetups");
+
+  const meetups = await meetupsCollection
+    .find(
+      {},
       {
-        params: { meetupId: "1" },
-      },
-    ],
+        _id: 1,
+      }
+    )
+    .toArray();
+
+  client.close();
+
+  return {
+    paths: meetups.map((meetupId) => ({
+      params: { meetupId: meetupId.toString() },
+    })),
     fallback: true, // Especially in a dynamic page, it will decide whether pre-render new page. (if you have a multiple of dynamic detail page, it is very useful to generate partial, not all over the page, it can save the server performance.)
   };
 };
@@ -27,15 +43,26 @@ export const getStaticPaths = async () => {
 export const getStaticProps = async (context) => {
   // we can get url params by context object's params property
   const { meetupId } = context.params;
-  console.log("params.meetupId", meetupId);
+
+  const client = await getMongodbClient();
+
+  const db = client.db();
+  const meetupsCollection = db.collection("meetups");
+
+  // FIXME: findOne: _id: new ObjectId(meetupId)
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: new ObjectId(meetupId),
+  });
+
+  client.close();
 
   return {
     props: {
       meetupData: {
-        title: "First Meetup",
-        image: "/images/city.jpeg",
-        address: "Some street 5, Some City",
-        description: "This is a first meetup",
+        title: selectedMeetup.title,
+        image: selectedMeetup.image,
+        address: selectedMeetup.address,
+        description: selectedMeetup.description,
       },
     },
     revalidate: 1800,

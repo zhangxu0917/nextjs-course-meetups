@@ -4,9 +4,11 @@ import classes from "./MeetupItem.module.css";
 
 const MeetupItem = (props) => {
   const router = useRouter();
-  const meetupId = props.meetupId;
+  console.log(props);
+  const meetupId = props.id;
 
   const showDetailsHandler = () => {
+    console.log(meetupId);
     router.push(`/${meetupId}`);
   };
 

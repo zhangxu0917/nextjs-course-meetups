@@ -1,23 +1,24 @@
 import Head from "next/head";
 import MeetupList from "@/components/meetups/MeetupList";
+import { getMongodbClient } from "@/libs/db";
 
 // a local mock data
-const DUMMY_MEETUPS = [
-  {
-    id: "m1",
-    title: "A First meetup",
-    image: "/images/city.jpeg",
-    address: "Some address 5, 12345 Some city",
-    description: "This is the first meetup!",
-  },
-  {
-    id: "m2",
-    title: "A First meetup",
-    image: "/images/city.jpeg",
-    address: "Some address 5, 12345 Some city",
-    description: "This is the second meetup!",
-  },
-];
+// const DUMMY_MEETUPS = [
+//   {
+//     id: "m1",
+//     title: "A First meetup",
+//     image: "/images/city.jpeg",
+//     address: "Some address 5, 12345 Some city",
+//     description: "This is the first meetup!",
+//   },
+//   {
+//     id: "m2",
+//     title: "A First meetup",
+//     image: "/images/city.jpeg",
+//     address: "Some address 5, 12345 Some city",
+//     description: "This is the second meetup!",
+//   },
+// ];
 
 /**
  * if you need to wait data from server, you can export a function with fixed name 'getStaticProps'. (It can be a async function and use await/async feature  in it)
@@ -26,9 +27,23 @@ const DUMMY_MEETUPS = [
  */
 export const getStaticProps = async () => {
   // It materially is server side code. You can read file or database in it. It will never execute in client side(browser)
+
+  const client = await getMongodbClient();
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+  const meetups = await meetupsCollection.find().toArray();
+
+  client.close();
+
   return {
     props: {
-      meetups: DUMMY_MEETUPS,
+      meetups: meetups.map((item) => ({
+        title: item.title,
+        address: item.address,
+        image: item.image,
+        id: item._id.toString(),
+      })),
     },
     revalidate: 1800, // set a duration to refresh data(regenerate page) by server.(unit second)
   };
